@@ -5,8 +5,8 @@ logs/*.log
 npm-debug.log
 coverage
 .env
-dist/*
-dist-vsix/*
+dist/
+dist-vsix/
 yarn-error.log
 bundle-stats.json
 .yalc

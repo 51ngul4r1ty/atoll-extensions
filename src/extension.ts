@@ -32,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
     context.subscriptions.push(disposable2);
 
-    myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10000);
+    myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1000000);
     myStatusBarItem.command = myCommandId;
     context.subscriptions.push(myStatusBarItem);
 
