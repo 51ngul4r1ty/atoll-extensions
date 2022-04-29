@@ -3,6 +3,10 @@
   "displayName": "Atoll Extension",
   "description": "Use Atoll from within VS Code",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/51ngul4r1ty/atoll-extensions.git"
+  },
   "engines": {
     "vscode": "^1.66.0"
   },
@@ -10,7 +14,7 @@
     "Other"
   ],
   "activationEvents": [
-    "*"
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -34,7 +38,9 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "prebuild-vsix": "mkdir ./dist-vsix/",
+    "build-vsix": "vsce package --out ./dist-vsix/"
   },
   "devDependencies": {
     "@types/vscode": "^1.66.0",
