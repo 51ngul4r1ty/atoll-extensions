@@ -1,31 +1,18 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
 // externals
 import { window } from "vscode";
 
 // libraries
 import { atollClient } from "@atoll/client-sdk";
 
-/**
- * Shows a pick list using window.showQuickPick().
- */
 export async function disconnect() {
-    // let i = 0;
-    // const result = await window.showQuickPick(["eins", "zwei", "drei"], {
-    //     placeHolder: "eins, zwei or drei",
-    //     onDidSelectItem: (item) => window.showInformationMessage(`Focus ${++i}: ${item}`)
-    // });
-    // TODO: Check to see if user is actually connected - show message if not connected
-    // TODO: If connected - clear any persisted connection data
-    window.showInformationMessage("Disconnected from Atoll server.");
+    if (!atollClient.isConnected()) {
+        window.showWarningMessage("No need to disconnect- currently not connected to Atoll server.");
+    } else {
+        atollClient.disconnect();
+        window.showInformationMessage("Disconnected from Atoll server.");
+    }
 }
 
-/**
- * Shows an input box using window.showInputBox().
- */
 export async function connect() {
     const defaultServerUrl = "http://localhost:8500/";
     const serverUrl = await window.showInputBox({
@@ -39,6 +26,10 @@ export async function connect() {
             return null;
         }
     });
+    if (!serverUrl) {
+        window.showWarningMessage("Aborted connection.");
+        return;
+    }
     const defaultUserName = "";
     const rawUserName = await window.showInputBox({
         value: defaultUserName,
@@ -51,6 +42,10 @@ export async function connect() {
             return null;
         }
     });
+    if (!rawUserName) {
+        window.showWarningMessage("Aborted connection.");
+        return;
+    }
     const userName = rawUserName?.trim() || "";
     const defaultPassword = "";
     const rawPassword = await window.showInputBox({
@@ -65,6 +60,10 @@ export async function connect() {
             return null;
         }
     });
+    if (!rawPassword) {
+        window.showWarningMessage("Aborted connection.");
+        return;
+    }
     const password = rawPassword?.trim() || "";
     window.showInformationMessage(`Connecting to "${serverUrl}" using "${userName}"...`);
     const connectionResult = await atollClient.connect(serverUrl || "", userName, password);
