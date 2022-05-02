@@ -2,7 +2,7 @@
   "name": "atoll-extension",
   "displayName": "Atoll Extension",
   "description": "Use Atoll from within VS Code",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/51ngul4r1ty/atoll-extensions.git"

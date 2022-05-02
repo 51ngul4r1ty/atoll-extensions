@@ -1,20 +1,28 @@
 // externals
-import { window } from "vscode";
+import { window, ExtensionContext } from "vscode";
 
 // libraries
 import { atollClient } from "@atoll/client-sdk";
 
-export async function disconnect() {
+// consts/enums
+import { SETTING_KEY_SERVER_URL, SETTING_KEY_USERNAME } from "./settingConsts";
+
+// utils
+import * as settingStore from "./settingStore";
+
+export async function disconnect(context: ExtensionContext) {
     if (!atollClient.isConnected()) {
         window.showWarningMessage("No need to disconnect- currently not connected to Atoll server.");
     } else {
         atollClient.disconnect();
+        settingStore.clearSetting(context, SETTING_KEY_SERVER_URL);
+        settingStore.clearSetting(context, SETTING_KEY_USERNAME);
         window.showInformationMessage("Disconnected from Atoll server.");
     }
 }
 
-export async function connect() {
-    const defaultServerUrl = "http://localhost:8500/";
+export async function connect(context: ExtensionContext) {
+    const defaultServerUrl = await settingStore.loadSettingWithFallback(context, SETTING_KEY_SERVER_URL, "http://localhost:8500/");
     const serverUrl = await window.showInputBox({
         value: defaultServerUrl,
         valueSelection: [0, defaultServerUrl.length],
@@ -30,7 +38,7 @@ export async function connect() {
         window.showWarningMessage("Aborted connection.");
         return;
     }
-    const defaultUserName = "";
+    const defaultUserName = await settingStore.loadSettingWithFallback(context, SETTING_KEY_USERNAME, "");
     const rawUserName = await window.showInputBox({
         value: defaultUserName,
         valueSelection: [0, defaultUserName.length],
@@ -69,6 +77,8 @@ export async function connect() {
     const connectionResult = await atollClient.connect(serverUrl || "", userName, password);
     if (connectionResult === null) {
         window.showInformationMessage("Successfully connected to Atoll server!");
+        settingStore.saveSetting(context, SETTING_KEY_SERVER_URL, serverUrl);
+        settingStore.saveSetting(context, SETTING_KEY_USERNAME, userName);
     } else {
         window.showErrorMessage(`Error connecting to Atoll server: ${connectionResult}`);
     }
