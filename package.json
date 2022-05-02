@@ -26,6 +26,10 @@
       {
         "command": "atoll-extension.disconnect",
         "title": "Atoll: Disconnect"
+      },
+      {
+        "command": "atoll-extension.status-bar-click",
+        "title": "Atoll: Activate Status Bar Item"
       }
     ]
   },

@@ -24,7 +24,16 @@ export function activate(context: vscode.ExtensionContext) {
     });
     context.subscriptions.push(disconnectCommand);
 
+    const statusBarCommand = vscode.commands.registerCommand("atoll-extension.status-bar-click", async () => {
+        if (!atollClient.isConnected()) {
+            await connect(context);
+            updateStatusBarItem();
+        }
+    });
+    context.subscriptions.push(statusBarCommand);
+
     myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1000000);
+    myStatusBarItem.command = "atoll-extension.status-bar-click";
     context.subscriptions.push(myStatusBarItem);
 
     // update status bar item once at start
