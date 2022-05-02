@@ -1,0 +1,21 @@
+{
+    "folders": [
+        {
+            "path": "."
+        },
+        {
+            "path": "../atoll-api-types"
+        },
+        {
+            "path": "../atoll-client-sdk"
+        }
+    ],
+    "settings": {
+        "bookmarks.navigateThroughAllFiles": true,
+        "coverage-gutters.showGutterCoverage": true,
+        "coverage-gutters.coverageFileNames": ["lcov.info"],
+        "coverage-gutters.coverageReportFileName": "coverage/**/index.html",
+        "coverage-gutters.showLineCoverage": false,
+        "typescript.tsc.autoDetect": "on"
+    }
+}
