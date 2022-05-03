@@ -8,6 +8,9 @@
         },
         {
             "path": "../atoll-client-sdk"
+        },
+        {
+            "path": "../atoll-rest-fetch"
         }
     ],
     "settings": {

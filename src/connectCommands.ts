@@ -1,5 +1,5 @@
 // externals
-import { window, ExtensionContext } from "vscode";
+import { window, ExtensionContext, QuickPickOptions, QuickPickItem } from "vscode";
 
 // libraries
 import { atollClient } from "@atoll/client-sdk";
@@ -76,9 +76,29 @@ export async function connect(context: ExtensionContext) {
     window.showInformationMessage(`Connecting to "${serverUrl}" using "${userName}"...`);
     const connectionResult = await atollClient.connect(serverUrl || "", userName, password);
     if (connectionResult === null) {
-        window.showInformationMessage("Successfully connected to Atoll server!");
+        window.showInformationMessage("Successfully connected to Atoll server - loading projects...");
         settingStore.saveSetting(context, SETTING_KEY_SERVER_URL, serverUrl);
         settingStore.saveSetting(context, SETTING_KEY_USERNAME, userName);
+        const projects = await atollClient.fetchProjects();
+        const projectItems = projects.map((project) => project.name);
+        const quickPickOptions: QuickPickOptions = {
+            title: "Choose an Atoll Porject",
+            matchOnDescription: true // ,
+            // onDidSelectItem: (item: QuickPickItem) => {}
+        };
+        const projectName = await window.showQuickPick(projectItems, quickPickOptions);
+        if (!projectName) {
+            window.showWarningMessage("Aborted project selection.");
+            return;
+        }
+        const matchingProjects = projects.filter((project) => project.name === projectName);
+        if (matchingProjects.length !== 1) {
+            window.showErrorMessage(`Only expected a single project metch, but ${matchingProjects.length} were found!`);
+            return;
+        }
+        const chosenProject = matchingProjects[0];
+        const projectId = chosenProject.id;
+        window.showInformationMessage(`${projectId} chosen`);
     } else {
         window.showErrorMessage(`Error connecting to Atoll server: ${connectionResult}`);
     }
