@@ -1,6 +1,6 @@
 // utils
 import { ExtensionContext } from "vscode";
-import { loadSetting, saveSetting } from "./globalStateSettingUtil";
+import { loadSetting, saveSetting } from "./settingStore";
 
 // consts/enums
 import {

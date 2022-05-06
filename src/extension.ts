@@ -8,6 +8,8 @@ import { atollClient } from "@atoll/client-sdk";
 import { connect, disconnect } from "./connectCommands";
 import { chooseStory } from "./chooseStoryCommands";
 import * as settingStore from "./settingStore";
+
+// consts/enums
 import { SETTING_KEY_BACKLOGITEM_FRIENDLY_ID, SETTING_KEY_BACKLOGITEM_STORY_PHRASE } from "./settingConsts";
 
 let myStatusBarItem: vscode.StatusBarItem;
