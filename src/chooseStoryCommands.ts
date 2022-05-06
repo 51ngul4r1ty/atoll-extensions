@@ -5,16 +5,8 @@ import { window, ExtensionContext, QuickPickOptions } from "vscode";
 import type { SprintBacklogResourceItem } from "@atoll/api-types";
 import { atollClient } from "@atoll/client-sdk";
 
-// consts/enums
-import {
-    SETTING_KEY_BACKLOGITEM_FRIENDLY_ID,
-    SETTING_KEY_BACKLOGITEM_ID,
-    SETTING_KEY_BACKLOGITEM_STORY_PHRASE,
-    SETTING_KEY_CURRENT_SPRINT_URL
-} from "./settingConsts";
-
-// utils
-import * as settingStore from "./settingStore";
+// state
+import { state } from "./extensionState";
 
 const buildUniqueBacklogItemName = (backlogItem: SprintBacklogResourceItem) => {
     const parts: string[] = [];
@@ -30,11 +22,12 @@ const buildUniqueBacklogItemName = (backlogItem: SprintBacklogResourceItem) => {
 };
 
 export async function chooseStory(context: ExtensionContext) {
+    await state.loadSettings(context);
     if (!atollClient.isConnected()) {
         window.showWarningMessage("You must be connected to an Atoll server instance to use this functionality.");
         return;
     }
-    const currentSprintUri = (await settingStore.loadSetting(context, SETTING_KEY_CURRENT_SPRINT_URL)) || "";
+    const currentSprintUri = state.currentSprintUrl;
     if (!currentSprintUri) {
         window.showErrorMessage(
             "Unable to load current sprint URL - it should be stored by the app after connecting to the Atoll server and " +
@@ -83,10 +76,13 @@ export async function chooseStory(context: ExtensionContext) {
         return;
     }
     const matchingSBI = matchingSBIs[0];
-    const backlogItemId = matchingSBI.id;
     const id = matchingSBI.externalId || matchingSBI.friendlyId;
-    settingStore.saveSetting(context, SETTING_KEY_BACKLOGITEM_ID, backlogItemId);
-    settingStore.saveSetting(context, SETTING_KEY_BACKLOGITEM_FRIENDLY_ID, id);
-    settingStore.saveSetting(context, SETTING_KEY_BACKLOGITEM_STORY_PHRASE, matchingSBI.storyPhrase);
+
+    state.currentBacklogItemId = matchingSBI.id;
+    state.currentBacklogItemFriendlyId = id;
+    state.currentBacklogItemStoryPhrase = matchingSBI.storyPhrase;
+
+    await state.saveSettings(context);
+
     window.showInformationMessage(`Backlog item "${id} - ${matchingSBI.storyPhrase}" selected.`);
 }

@@ -5,31 +5,25 @@ import { window, ExtensionContext, QuickPickOptions } from "vscode";
 import { atollClient } from "@atoll/client-sdk";
 import type { ProjectResourceItem } from "@atoll/api-types";
 
-// consts/enums
-import {
-    SETTING_KEY_CURRENT_SPRINT_URL,
-    SETTING_KEY_PROJECT_ID,
-    SETTING_KEY_PROJECT_NAME,
-    SETTING_KEY_SERVER_URL,
-    SETTING_KEY_USERNAME
-} from "./settingConsts";
-
-// utils
-import * as settingStore from "./settingStore";
+// state
+import { state } from "./extensionState";
 
 export async function disconnect(context: ExtensionContext) {
     if (!atollClient.isConnected()) {
         window.showWarningMessage("No need to disconnect- currently not connected to Atoll server.");
     } else {
         atollClient.disconnect();
-        settingStore.clearSetting(context, SETTING_KEY_SERVER_URL);
-        settingStore.clearSetting(context, SETTING_KEY_USERNAME);
+        await state.loadSettings(context);
+        state.atollServerUrl = null;
+        state.atollUserName = null;
+        await state.saveSettings(context);
         window.showInformationMessage("Disconnected from Atoll server.");
     }
 }
 
 export async function connect(context: ExtensionContext) {
-    const defaultServerUrl = await settingStore.loadSettingWithFallback(context, SETTING_KEY_SERVER_URL, "http://localhost:8500/");
+    await state.loadSettings(context);
+    const defaultServerUrl = state.atollServerUrl || "http://localhost:8500/";
     const serverUrl = await window.showInputBox({
         value: defaultServerUrl,
         valueSelection: [0, defaultServerUrl.length],
@@ -45,7 +39,7 @@ export async function connect(context: ExtensionContext) {
         window.showWarningMessage("Aborted connection.");
         return;
     }
-    const defaultUserName = await settingStore.loadSettingWithFallback(context, SETTING_KEY_USERNAME, "");
+    const defaultUserName = state.atollUserName || "";
     const rawUserName = await window.showInputBox({
         value: defaultUserName,
         valueSelection: [0, defaultUserName.length],
@@ -84,8 +78,9 @@ export async function connect(context: ExtensionContext) {
     const connectionResult = await atollClient.connect(serverUrl || "", userName, password);
     if (connectionResult === null) {
         window.showInformationMessage("Successfully connected to Atoll server - loading projects...");
-        settingStore.saveSetting(context, SETTING_KEY_SERVER_URL, serverUrl);
-        settingStore.saveSetting(context, SETTING_KEY_USERNAME, userName);
+        state.atollServerUrl = serverUrl;
+        state.atollUserName = userName;
+        await state.saveSettings(context);
         const projects: ProjectResourceItem[] = await atollClient.fetchProjects();
         const projectItems = projects.map((project) => project.name);
         const projectItemsSorted = projectItems.sort((a, b) => (a < b ? -1 : 1));
@@ -108,13 +103,15 @@ export async function connect(context: ExtensionContext) {
         const project = matchingProjects[0];
         const projectId = project.id;
         const links = project.links;
-        settingStore.saveSetting(context, SETTING_KEY_PROJECT_ID, projectId);
-        settingStore.saveSetting(context, SETTING_KEY_PROJECT_NAME, projectName);
+        state.currentProjectId = projectId;
+        state.currentProjectName = projectName;
+        await state.saveSettings(context);
         const currentSprintUri = atollClient.findLinkUriByRel(links, "related:sprint/current");
         if (!currentSprintUri) {
             window.showErrorMessage("Unable to find current sprint link in project returned by Atoll server!  Contact support.");
         }
-        settingStore.saveSetting(context, SETTING_KEY_CURRENT_SPRINT_URL, currentSprintUri);
+        state.currentSprintUrl = currentSprintUri;
+        await state.saveSettings(context);
         window.showInformationMessage(`Project "${projectName}" selected.`);
     } else {
         window.showErrorMessage(`Error connecting to Atoll server: ${connectionResult}`);
