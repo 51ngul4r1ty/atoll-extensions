@@ -13,3 +13,4 @@ bundle-stats.json
 yalc.lock
 debug.log
 .DS_Store
+.vscode-test/
