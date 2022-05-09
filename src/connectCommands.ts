@@ -7,6 +7,7 @@ import type { ProjectResourceItem } from "@atoll/api-types";
 
 // state
 import { state } from "./extensionState";
+import { logDebug } from "./logger";
 
 export async function disconnect(context: ExtensionContext) {
     if (!atollClient.isConnected()) {
@@ -75,11 +76,31 @@ export async function connect(context: ExtensionContext) {
     }
     const password = rawPassword?.trim() || "";
     window.showInformationMessage(`Connecting to "${serverUrl}" using "${userName}"...`);
-    const connectionResult = await atollClient.connect(serverUrl || "", userName, password);
+    const handleNotification = async (message: string, level: string) => {
+        switch (level) {
+            case "info": {
+                window.showInformationMessage(message);
+                break;
+            }
+            case "warn": {
+                window.showWarningMessage(message);
+                break;
+            }
+            case "error": {
+                window.showErrorMessage(message);
+                break;
+            }
+            default: {
+                throw new Error(`Unexpected level "${level}" with message "${message}"`);
+            }
+        }
+    };
+    const connectionResult = await atollClient.connect(serverUrl || "", userName, password, handleNotification);
     if (connectionResult === null) {
         window.showInformationMessage("Successfully connected to Atoll server - loading projects...");
         state.atollServerUrl = serverUrl;
         state.atollUserName = userName;
+        state.atollRefreshToken = atollClient.refreshToken;
         await state.saveSettings(context);
         const projects: ProjectResourceItem[] = await atollClient.fetchProjects();
         const projectItems = projects.map((project) => project.name);
@@ -110,7 +131,8 @@ export async function connect(context: ExtensionContext) {
         if (!currentSprintUri) {
             window.showErrorMessage("Unable to find current sprint link in project returned by Atoll server!  Contact support.");
         }
-        state.currentSprintUrl = currentSprintUri;
+        state.currentSprintUrl = atollClient.buildFullUri(currentSprintUri || "");
+        logDebug(`currentSprintUri saved to global state as "${state.currentSprintUrl}"`);
         await state.saveSettings(context);
         window.showInformationMessage(`Project "${projectName}" selected.`);
     } else {

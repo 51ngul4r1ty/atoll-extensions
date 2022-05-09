@@ -7,6 +7,7 @@ import { atollClient } from "@atoll/client-sdk";
 
 // state
 import { state } from "./extensionState";
+import { logError, logInfo, logWarning, MessageStyle } from "./logger";
 
 const buildUniqueBacklogItemName = (backlogItem: SprintBacklogResourceItem) => {
     const parts: string[] = [];
@@ -35,26 +36,32 @@ export async function chooseStory(context: ExtensionContext) {
         );
         return;
     }
-    window.showInformationMessage("Fetching data for current sprint from Atoll server...");
+    logInfo("Fetching data for current sprint from Atoll server...", MessageStyle.OutputChannelAndMessage);
     const currentSprint = await atollClient.fetchSprintByUri(currentSprintUri);
     if (currentSprint === null) {
-        window.showInformationMessage(
-            "The last sprint is complete and there is no new sprint in the Atoll database for this project!"
+        logInfo(
+            "The last sprint is complete and there is no new sprint in the Atoll database for this project!",
+            MessageStyle.OutputChannelAndMessage
         );
         return;
     }
-    const backlogItemsUri = atollClient.findLinkUriByRel(currentSprint.links, "related:sprint-backlog-items");
-    if (backlogItemsUri === null) {
-        window.showErrorMessage(
-            "No link is available in current sprint for sprint backlog items - this is unexpected!  Contact support."
+    const backlogItemsRelativeUri = atollClient.findLinkUriByRel(currentSprint.links, "related:sprint-backlog-items");
+    if (backlogItemsRelativeUri === null) {
+        logInfo(
+            "No link is available in current sprint for sprint backlog items - this is unexpected!  Contact support.",
+            MessageStyle.OutputChannelAndMessage
         );
         return;
     }
-    window.showInformationMessage("Fetching data for sprint backlog items from Atoll server...");
+    logInfo("Fetching data for sprint backlog items from Atoll server...", MessageStyle.OutputChannelAndMessage);
+    const backlogItemsUri = atollClient.buildFullUri(backlogItemsRelativeUri);
     const sprintBacklogItems = await atollClient.fetchSprintBacklogItemsByUri(backlogItemsUri);
 
     if (sprintBacklogItems === null) {
-        window.showInformationMessage("There are no sprint backlog items available - please add sprint backlog items first!");
+        logInfo(
+            "There are no sprint backlog items available - please add sprint backlog items first!",
+            MessageStyle.OutputChannelAndMessage
+        );
         return;
     }
     const backlogItems = sprintBacklogItems.map((sprintBacklogItem) => buildUniqueBacklogItemName(sprintBacklogItem));
@@ -67,12 +74,15 @@ export async function chooseStory(context: ExtensionContext) {
     };
     const backlogItemName = await window.showQuickPick(backlogItemsSorted, quickPickOptions);
     if (!backlogItemName) {
-        window.showWarningMessage("Aborted backlog item selection.");
+        logWarning("Aborted backlog item selection.", MessageStyle.OutputChannelAndMessage);
         return;
     }
     const matchingSBIs = sprintBacklogItems.filter((backlogItem) => buildUniqueBacklogItemName(backlogItem) === backlogItemName);
     if (matchingSBIs.length !== 1) {
-        window.showErrorMessage(`Only expected a single backlog item match, but ${matchingSBIs.length} were found!`);
+        logError(
+            `Only expected a single backlog item match, but ${matchingSBIs.length} were found!`,
+            MessageStyle.OutputChannelAndMessage
+        );
         return;
     }
     const matchingSBI = matchingSBIs[0];
@@ -84,5 +94,5 @@ export async function chooseStory(context: ExtensionContext) {
 
     await state.saveSettings(context);
 
-    window.showInformationMessage(`Backlog item "${id} - ${matchingSBI.storyPhrase}" selected.`);
+    logInfo(`Backlog item "${id} - ${matchingSBI.storyPhrase}" selected.`, MessageStyle.OutputChannelAndMessage);
 }

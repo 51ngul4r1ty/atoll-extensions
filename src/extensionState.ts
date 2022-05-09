@@ -4,27 +4,30 @@ import { loadSetting, saveSetting } from "./settingStore";
 
 // consts/enums
 import {
-    SETTING_KEY_PROJECT_ID,
-    SETTING_KEY_PROJECT_NAME,
-    SETTING_KEY_SERVER_URL,
-    SETTING_KEY_USERNAME,
     SETTING_KEY_BACKLOGITEM_FRIENDLY_ID,
     SETTING_KEY_BACKLOGITEM_ID,
     SETTING_KEY_BACKLOGITEM_STORY_PHRASE,
-    SETTING_KEY_CURRENT_SPRINT_URL
+    SETTING_KEY_CURRENT_SPRINT_URL,
+    SETTING_KEY_PROJECT_ID,
+    SETTING_KEY_PROJECT_NAME,
+    SETTING_KEY_REFRESH_TOKEN,
+    SETTING_KEY_SERVER_URL,
+    SETTING_KEY_USERNAME
 } from "./settingConsts";
+import { logDebug } from "./logger";
 
 export type ExtensionState = {};
 
 const SETTING_NAME_MAP = {
+    atollRefreshToken: SETTING_KEY_REFRESH_TOKEN,
+    atollServerUrl: SETTING_KEY_SERVER_URL,
+    atollUserName: SETTING_KEY_USERNAME,
     currentBacklogItemFriendlyId: SETTING_KEY_BACKLOGITEM_FRIENDLY_ID,
     currentBacklogItemId: SETTING_KEY_BACKLOGITEM_ID,
     currentBacklogItemStoryPhrase: SETTING_KEY_BACKLOGITEM_STORY_PHRASE,
-    currentSprintUrl: SETTING_KEY_CURRENT_SPRINT_URL,
     currentProjectId: SETTING_KEY_PROJECT_ID,
     currentProjectName: SETTING_KEY_PROJECT_NAME,
-    atollServerUrl: SETTING_KEY_SERVER_URL,
-    atollUserName: SETTING_KEY_USERNAME
+    currentSprintUrl: SETTING_KEY_CURRENT_SPRINT_URL
 };
 
 export class ExtensionStateStore {
@@ -33,20 +36,39 @@ export class ExtensionStateStore {
     private workingSettings: Record<string, string | null> = {};
     public async loadSettings(context: ExtensionContext) {
         for (const [propName, settingName] of Object.entries(SETTING_NAME_MAP)) {
-            const value = await loadSetting(context, settingName);
+            let value: string | null;
+            let loadSuccess = false;
+            try {
+                value = await loadSetting(context, settingName);
+                logDebug(`loading setting: ${settingName} = "${value}"`);
+                loadSuccess = true;
+            } catch (err) {
+                console.log(`An error occurred reading setting "${settingName}", in-memory value will be null`);
+                value = null;
+            }
             this.workingSettings[propName] = value;
-            this.savedSettings[propName] = value;
+            if (loadSuccess) {
+                this.savedSettings[propName] = value;
+            }
         }
     }
     public async saveSettings(context: ExtensionContext) {
         for (const [propName, settingName] of Object.entries(SETTING_NAME_MAP)) {
             const workingValue = this.workingSettings[propName] || null;
             const savedValue = this.savedSettings[propName];
+            let saveSuccess = false;
             if (workingValue !== savedValue) {
                 // only update values that have changed
-                saveSetting(context, settingName, workingValue);
+                try {
+                    saveSetting(context, settingName, workingValue);
+                    saveSuccess = true;
+                } catch (err) {
+                    console.log(`An error occurred writing setting "${settingName}" - it will be out of sync now`);
+                }
             }
-            this.savedSettings[propName] = workingValue;
+            if (saveSuccess) {
+                this.savedSettings[propName] = workingValue;
+            }
         }
     }
     private setSetting(name: string, value: string | null) {
@@ -117,6 +139,14 @@ export class ExtensionStateStore {
     }
     public set atollUserName(value: string | null) {
         this.setSetting("atollUserName", value);
+    }
+    //#endregion
+    //#region atollRefreshToken
+    public get atollRefreshToken() {
+        return this.getSetting("atollRefreshToken");
+    }
+    public set atollRefreshToken(value: string | null) {
+        this.setSetting("atollRefreshToken", value);
     }
     //#endregion
 }
