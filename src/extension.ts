@@ -2,7 +2,7 @@
 import * as vscode from "vscode";
 
 // libraries
-import { atollClient, DebugLog } from "@atoll/client-sdk";
+import { atollClient } from "@atoll/client-sdk";
 
 // utils
 import { logDebug, logError, logInfo, logWarning, MessageStyle } from "./logger";
@@ -12,6 +12,8 @@ import * as settingStore from "./settingStore";
 
 // consts/enums
 import { SETTING_KEY_BACKLOGITEM_FRIENDLY_ID, SETTING_KEY_BACKLOGITEM_STORY_PHRASE } from "./settingConsts";
+
+// state
 import { state } from "./extensionState";
 
 let myStatusBarItem: vscode.StatusBarItem;
@@ -41,14 +43,10 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         };
         logDebug(`Setting up with refresh token - atoll server URL = ${state.atollServerUrl}...`);
-        let result: DebugLog | null = null;
         try {
-            result = await atollClient.setupWithRefreshToken(state.atollServerUrl || "", handleNotification);
-            result.items.forEach((item) => {
-                logDebug(item.message);
-            });
-            if (result?.errorResult) {
-                logInfo(`Unable to set up with refresh token: ${result.errorResult}`, MessageStyle.OutputChannelAndMessage);
+            const result = await atollClient.setupWithRefreshToken(state.atollServerUrl || "", handleNotification);
+            if (result) {
+                logInfo(`Unable to set up with refresh token: ${result}`, MessageStyle.OutputChannelAndMessage);
             }
         } catch (err) {
             logError(`Catch triggered: ${err}`);
