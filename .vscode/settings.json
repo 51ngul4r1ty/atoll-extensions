@@ -5,14 +5,17 @@
     "**/.DS_Store": true,
     "node_modules": true,
     ".yalc": true,
-    "out": false, // set this to true to hide the "out" folder with the compiled JS files
-    "dist": false // set this to true to hide the "dist" folder with the compiled JS files
+    "out": true, // set this to true to hide the "out" folder with the compiled JS files
+    "dist": true, // set this to true to hide the "dist" folder with the compiled JS files
+    "dist-vsix": true,
+    ".vscode-test": true
   },
   "search.exclude": {
     "**/node_modules": true,
     "coverage": true,
     "out": true, // set this to false to include "out" folder in search results
-    "dist": true // set this to false to include "dist" folder in search results
+    "dist": true, // set this to false to include "dist" folder in search results
+    "dist-vsix": true
   },
   "bookmarks.navigateThroughAllFiles": true,
   "editor.formatOnSave": true,
