@@ -7,6 +7,8 @@ import type { ProjectResourceItem } from "@atoll/api-types";
 
 // state
 import { state } from "./extensionState";
+
+// utils
 import { logDebug } from "./logger";
 
 export async function disconnect(context: ExtensionContext) {
