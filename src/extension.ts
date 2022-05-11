@@ -18,72 +18,94 @@ import { state } from "./extensionState";
 
 let myStatusBarItem: vscode.StatusBarItem;
 
-export async function activate(context: vscode.ExtensionContext) {
-    logInfo("Atoll extension has been activated.");
-    await state.loadSettings(context);
-    if (state.atollRefreshToken) {
-        atollClient.refreshToken = state.atollRefreshToken;
-        const handleNotification = async (message: string, level: string) => {
-            switch (level) {
-                case "info": {
-                    logInfo(message, MessageStyle.OutputChannelAndMessage);
-                    break;
-                }
-                case "warn": {
-                    logWarning(message, MessageStyle.OutputChannelAndMessage);
-                    break;
-                }
-                case "error": {
-                    logError(message, MessageStyle.OutputChannelAndMessage);
-                    break;
-                }
-                default: {
-                    throw new Error(`Unexpected level "${level}" with message "${message}"`);
-                }
+async function reconnectToAtoll() {
+    atollClient.refreshToken = state.atollRefreshToken;
+    const handleNotification = async (message: string, level: string) => {
+        switch (level) {
+            case "info": {
+                logInfo(message, MessageStyle.OutputChannelAndMessage);
+                break;
             }
-        };
-        logDebug(`Setting up with refresh token - atoll server URL = ${state.atollServerUrl}...`);
-        try {
-            const result = await atollClient.setupWithRefreshToken(state.atollServerUrl || "", handleNotification);
-            if (result) {
-                logInfo(`Unable to set up with refresh token: ${result}`, MessageStyle.OutputChannelAndMessage);
+            case "warn": {
+                logWarning(message, MessageStyle.OutputChannelAndMessage);
+                break;
             }
-        } catch (err) {
-            logError(`Catch triggered: ${err}`);
+            case "error": {
+                logError(message, MessageStyle.OutputChannelAndMessage);
+                break;
+            }
+            default: {
+                throw new Error(`Unexpected level "${level}" with message "${message}"`);
+            }
         }
-        logDebug("Set up with refresh token.");
-        updateStatusBarItem(context);
+    };
+    logDebug(`Setting up with refresh token - atoll server URL = ${state.atollServerUrl}...`);
+    try {
+        const result = await atollClient.reconnect(state.atollServerUrl || "", handleNotification);
+        if (result) {
+            logInfo(`Unable to set up with refresh token: ${result}`, MessageStyle.OutputChannelAndMessage);
+        }
+    } catch (err) {
+        logError(`Catch triggered: ${err}`);
     }
+    logDebug("Set up with refresh token.");
+}
 
-    const connectCommand = vscode.commands.registerCommand("atoll-extension.connect", async () => {
-        await connect(context);
-        updateStatusBarItem(context);
-    });
-    context.subscriptions.push(connectCommand);
+let activated = false;
 
-    const disconnectCommand = vscode.commands.registerCommand("atoll-extension.disconnect", async () => {
-        await disconnect(context);
-        updateStatusBarItem(context);
-    });
-    context.subscriptions.push(disconnectCommand);
+async function initialActivation(context: vscode.ExtensionContext) {
+    activated = true;
+    try {
+        logInfo("Atoll extension has been activated.");
+        await state.loadSettings(context);
 
-    const statusBarCommand = vscode.commands.registerCommand("atoll-extension.status-bar-click", async () => {
-        if (!atollClient.isConnected()) {
+        // reconnect to Atoll server automatically
+        if (state.atollRefreshToken && !atollClient.isConnected()) {
+            await reconnectToAtoll();
+            updateStatusBarItem(context);
+        }
+
+        const connectCommand = vscode.commands.registerCommand("atoll-extension.connect", async () => {
             await connect(context);
             updateStatusBarItem(context);
-        } else {
-            await chooseStory(context);
+        });
+        context.subscriptions.push(connectCommand);
+
+        const disconnectCommand = vscode.commands.registerCommand("atoll-extension.disconnect", async () => {
+            await disconnect(context);
             updateStatusBarItem(context);
-        }
-    });
-    context.subscriptions.push(statusBarCommand);
+        });
+        context.subscriptions.push(disconnectCommand);
 
-    myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1000000);
-    myStatusBarItem.command = "atoll-extension.status-bar-click";
-    context.subscriptions.push(myStatusBarItem);
+        const statusBarCommand = vscode.commands.registerCommand("atoll-extension.status-bar-click", async () => {
+            if (!atollClient.isConnected()) {
+                await connect(context);
+                updateStatusBarItem(context);
+            } else {
+                await chooseStory(context);
+                updateStatusBarItem(context);
+            }
+        });
+        context.subscriptions.push(statusBarCommand);
 
-    // update status bar item once at start
-    await updateStatusBarItem(context);
+        myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1000000);
+        myStatusBarItem.command = "atoll-extension.status-bar-click";
+        context.subscriptions.push(myStatusBarItem);
+
+        // update status bar item once at start
+        await updateStatusBarItem(context);
+    } catch (err) {
+        // NOTE: This is intentionally done directly with window.showErrorMessage just in case there's
+        //   a problem with `logError` related code - it is essential that the user sees this.
+        vscode.window.showErrorMessage("Unable to activate Atoll (see output log for details)");
+        logError(`Unable to activate Atoll: ${err}`, MessageStyle.OutputChannel);
+    }
+}
+
+export async function activate(context: vscode.ExtensionContext) {
+    if (!activated) {
+        await initialActivation(context);
+    }
 }
 
 async function updateStatusBarItem(context: vscode.ExtensionContext): Promise<void> {

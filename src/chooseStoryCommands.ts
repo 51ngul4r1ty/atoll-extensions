@@ -59,7 +59,7 @@ export async function chooseStory(context: ExtensionContext) {
     const backlogItemsUri = atollClient.buildFullUri(backlogItemsRelativeUri);
     const sprintBacklogItems = await atollClient.fetchSprintBacklogItemsByUri(backlogItemsUri);
 
-    if (sprintBacklogItems === null) {
+    if (sprintBacklogItems === null || sprintBacklogItems.length === 0) {
         logInfo(
             "There are no sprint backlog items available - please add sprint backlog items first!",
             MessageStyle.OutputChannelAndMessage
