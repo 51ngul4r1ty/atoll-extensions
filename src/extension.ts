@@ -16,32 +16,16 @@ import { SETTING_KEY_BACKLOGITEM_FRIENDLY_ID, SETTING_KEY_BACKLOGITEM_STORY_PHRA
 // state
 import { state } from "./extensionState";
 
+// utils
+import * as notificationBridge from "./notificationBridge";
+
 let myStatusBarItem: vscode.StatusBarItem;
 
 async function reconnectToAtoll() {
     atollClient.refreshToken = state.atollRefreshToken;
-    const handleNotification = async (message: string, level: string) => {
-        switch (level) {
-            case "info": {
-                logInfo(message, MessageStyle.OutputChannelAndMessage);
-                break;
-            }
-            case "warn": {
-                logWarning(message, MessageStyle.OutputChannelAndMessage);
-                break;
-            }
-            case "error": {
-                logError(message, MessageStyle.OutputChannelAndMessage);
-                break;
-            }
-            default: {
-                throw new Error(`Unexpected level "${level}" with message "${message}"`);
-            }
-        }
-    };
     logDebug(`Setting up with refresh token - atoll server URL = ${state.atollServerUrl}...`);
     try {
-        const result = await atollClient.reconnect(state.atollServerUrl || "", handleNotification);
+        const result = await atollClient.reconnect(state.atollServerUrl || "", notificationBridge.handleNotification);
         if (result) {
             logInfo(`Unable to set up with refresh token: ${result}`, MessageStyle.OutputChannelAndMessage);
         }
