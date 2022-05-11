@@ -1,7 +1,3 @@
-// utils
-import { ExtensionContext } from "vscode";
-import { loadSetting, saveSetting } from "./settingStore";
-
 // consts/enums
 import {
     SETTING_KEY_BACKLOGITEM_FRIENDLY_ID,
@@ -14,6 +10,10 @@ import {
     SETTING_KEY_SERVER_URL,
     SETTING_KEY_USERNAME
 } from "./settingConsts";
+
+// utils
+import { ExtensionContext } from "vscode";
+import { loadSetting, saveSetting } from "./settingStore";
 import { logDebug } from "./logger";
 
 export type ExtensionState = {};
