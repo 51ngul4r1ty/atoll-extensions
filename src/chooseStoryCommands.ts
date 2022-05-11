@@ -7,6 +7,8 @@ import { atollClient } from "@atoll/client-sdk";
 
 // state
 import { state } from "./extensionState";
+
+// utils
 import { logError, logInfo, logWarning, MessageStyle } from "./logger";
 
 const buildUniqueBacklogItemName = (backlogItem: SprintBacklogResourceItem) => {
