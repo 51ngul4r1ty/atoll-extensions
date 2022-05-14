@@ -11,6 +11,9 @@
         },
         {
             "path": "../atoll-rest-fetch"
+        },
+        {
+            "path": "../atoll-rich-types"
         }
     ],
     "settings": {
