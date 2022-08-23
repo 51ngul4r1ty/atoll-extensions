@@ -19,7 +19,13 @@ import { state } from "./extensionState";
 // utils
 import * as notificationBridge from "./notificationBridge";
 
-let myStatusBarItem: vscode.StatusBarItem;
+const STATUS_BAR_ITEM_POSITION_PRIORITY_BASE = 1000000;
+const STATUS_BAR_ITEM_COUNT = 2;
+const STATUS_BAR_ITEM_LEFTMOST_ITEM = STATUS_BAR_ITEM_POSITION_PRIORITY_BASE + STATUS_BAR_ITEM_COUNT - 1;
+
+// NOTE: Ensure that STATUS_BAR_ITEM_COUNT updated to total up the number of status bar items below:
+let primaryStatusBarItem: vscode.StatusBarItem; // STATUS_BAR_ITEM 1
+let secondaryStatusBarItem: vscode.StatusBarItem; // STATUS_BAR_ITEM 2
 
 async function reconnectToAtoll() {
     atollClient.refreshToken = state.atollRefreshToken;
@@ -46,38 +52,54 @@ async function initialActivation(context: vscode.ExtensionContext) {
         // reconnect to Atoll server automatically
         if (state.atollRefreshToken && !atollClient.isConnected()) {
             await reconnectToAtoll();
-            updateStatusBarItem(context);
+            updatePrimaryStatusBarItem(context);
         }
 
         const connectCommand = vscode.commands.registerCommand("atoll-extension.connect", async () => {
             await connect(context);
-            updateStatusBarItem(context);
+            updatePrimaryStatusBarItem(context);
         });
         context.subscriptions.push(connectCommand);
 
         const disconnectCommand = vscode.commands.registerCommand("atoll-extension.disconnect", async () => {
             await disconnect(context);
-            updateStatusBarItem(context);
+            updatePrimaryStatusBarItem(context);
         });
         context.subscriptions.push(disconnectCommand);
 
-        const statusBarCommand = vscode.commands.registerCommand("atoll-extension.status-bar-click", async () => {
+        const primaryStatusBarCommand = vscode.commands.registerCommand("atoll-extension.primary-status-bar-click", async () => {
             if (!atollClient.isConnected()) {
                 await connect(context);
-                updateStatusBarItem(context);
+                updatePrimaryStatusBarItem(context);
             } else {
                 await chooseStory(context);
-                updateStatusBarItem(context);
+                updatePrimaryStatusBarItem(context);
             }
         });
-        context.subscriptions.push(statusBarCommand);
+        context.subscriptions.push(primaryStatusBarCommand);
 
-        myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1000000);
-        myStatusBarItem.command = "atoll-extension.status-bar-click";
-        context.subscriptions.push(myStatusBarItem);
+        const secondaryStatusBarCommand = vscode.commands.registerCommand(
+            "atoll-extension.secondary-status-bar-click",
+            async () => {
+                updateSecondaryStatusBarItem(context);
+            }
+        );
+        context.subscriptions.push(secondaryStatusBarCommand);
+
+        primaryStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, STATUS_BAR_ITEM_LEFTMOST_ITEM);
+        primaryStatusBarItem.command = "atoll-extension.primary-status-bar-click";
+        context.subscriptions.push(primaryStatusBarItem);
+
+        secondaryStatusBarItem = vscode.window.createStatusBarItem(
+            vscode.StatusBarAlignment.Left,
+            STATUS_BAR_ITEM_LEFTMOST_ITEM + 1
+        );
+        secondaryStatusBarItem.command = "atoll-extension.secondary-status-bar-click";
+        context.subscriptions.push(secondaryStatusBarItem);
 
         // update status bar item once at start
-        await updateStatusBarItem(context);
+        await updatePrimaryStatusBarItem(context);
+        await updateSecondaryStatusBarItem(context);
     } catch (err) {
         // NOTE: This is intentionally done directly with window.showErrorMessage just in case there's
         //   a problem with `logError` related code - it is essential that the user sees this.
@@ -92,20 +114,27 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 }
 
-async function updateStatusBarItem(context: vscode.ExtensionContext): Promise<void> {
-    // https://code.visualstudio.com/api/references/icons-in-labels
+// Icon information can be obtained here:
+// https://code.visualstudio.com/api/references/icons-in-labels
+
+async function updatePrimaryStatusBarItem(context: vscode.ExtensionContext): Promise<void> {
     if (atollClient.isConnected()) {
         const id = await settingStore.loadSetting(context, SETTING_KEY_BACKLOGITEM_FRIENDLY_ID);
         const storyPhrase = await settingStore.loadSetting(context, SETTING_KEY_BACKLOGITEM_STORY_PHRASE);
         if (!id) {
-            myStatusBarItem.text = `$(extensions-star-full) (choose work item)`;
+            primaryStatusBarItem.text = `$(extensions-star-full) (choose work item)`;
         } else {
-            myStatusBarItem.text = `$(extensions-star-full) ${id} » ${storyPhrase}`;
+            primaryStatusBarItem.text = `$(extensions-star-full) ${id} » ${storyPhrase}`;
         }
     } else {
-        myStatusBarItem.text = `$(extensions-star-full) (connect to Atoll)`;
+        primaryStatusBarItem.text = `$(extensions-star-full) (connect to Atoll)`;
     }
-    myStatusBarItem.show();
+    primaryStatusBarItem.show();
+}
+
+async function updateSecondaryStatusBarItem(context: vscode.ExtensionContext): Promise<void> {
+    secondaryStatusBarItem.text = "Busy";
+    secondaryStatusBarItem.show();
 }
 
 export function deactivate() {}
