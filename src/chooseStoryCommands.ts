@@ -3,13 +3,14 @@ import { window, ExtensionContext, QuickPickOptions } from "vscode";
 
 // libraries
 import type { SprintBacklogResourceItem } from "@atoll/api-types";
-import { atollClient } from "@atoll/client-sdk";
+import { atollClient, mapApiToBacklogItemStatus } from "@atoll/client-sdk";
 
 // state
 import { state } from "./extensionState";
 
 // utils
 import { logError, logInfo, logWarning, MessageStyle } from "./logger";
+import { BacklogItemStatus } from "@atoll/rich-types";
 
 const buildUniqueBacklogItemName = (backlogItem: SprintBacklogResourceItem) => {
     const parts: string[] = [];
@@ -59,7 +60,7 @@ export async function chooseStory(context: ExtensionContext) {
     const backlogItemsUri = atollClient.buildFullUri(backlogItemsRelativeUri);
     const sprintBacklogItems = await atollClient.fetchSprintBacklogItemsByUri(backlogItemsUri);
 
-    if (sprintBacklogItems === null) {
+    if (sprintBacklogItems === null || sprintBacklogItems.length === 0) {
         logInfo(
             "There are no sprint backlog items available - please add sprint backlog items first!",
             MessageStyle.OutputChannelAndMessage
@@ -93,7 +94,29 @@ export async function chooseStory(context: ExtensionContext) {
     state.currentBacklogItemId = matchingSBI.id;
     state.currentBacklogItemFriendlyId = id;
     state.currentBacklogItemStoryPhrase = matchingSBI.storyPhrase;
-
+    const existingStatus = mapApiToBacklogItemStatus(matchingSBI.status);
+    if (
+        existingStatus === BacklogItemStatus.None ||
+        existingStatus === BacklogItemStatus.NotStarted ||
+        existingStatus === BacklogItemStatus.InProgress
+    ) {
+        const backlogItemRelativeUri = atollClient.findLinkUriByRel(matchingSBI.links, "related:backlog-item-part");
+        if (!backlogItemRelativeUri) {
+            logError(
+                'Unable to update backlog item status to "In Progress"- ' +
+                    `cannot find backlogitem self link for ID "${matchingSBI.id}"`
+            );
+        } else {
+            // backlog item part ID: 93ee88b671244b99a985d1a164f6e577
+            // url: http://localhost:8500/api/v1/backlog-item-parts/93ee88b671244b99a985d1a164f6e577
+            // PATCH
+            // sprint backlog items may return backlogItemPartId?
+            // why doesn't it provide a link to the backlog item part?
+            const backlogItemPartsUri = atollClient.buildFullUri(backlogItemRelativeUri);
+            const result = await atollClient.updateBacklogItemPartStatusByUri(backlogItemPartsUri, BacklogItemStatus.InProgress);
+            console.log(result);
+        }
+    }
     await state.saveSettings(context);
 
     logInfo(`Backlog item "${id} - ${matchingSBI.storyPhrase}" selected.`, MessageStyle.OutputChannelAndMessage);

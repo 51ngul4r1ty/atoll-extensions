@@ -10,6 +10,7 @@ import { state } from "./extensionState";
 
 // utils
 import { logDebug } from "./logger";
+import * as notificationBridge from "./notificationBridge";
 
 export async function disconnect(context: ExtensionContext) {
     if (!atollClient.isConnected()) {
@@ -78,26 +79,7 @@ export async function connect(context: ExtensionContext) {
     }
     const password = rawPassword?.trim() || "";
     window.showInformationMessage(`Connecting to "${serverUrl}" using "${userName}"...`);
-    const handleNotification = async (message: string, level: string) => {
-        switch (level) {
-            case "info": {
-                window.showInformationMessage(message);
-                break;
-            }
-            case "warn": {
-                window.showWarningMessage(message);
-                break;
-            }
-            case "error": {
-                window.showErrorMessage(message);
-                break;
-            }
-            default: {
-                throw new Error(`Unexpected level "${level}" with message "${message}"`);
-            }
-        }
-    };
-    const connectionResult = await atollClient.connect(serverUrl || "", userName, password, handleNotification);
+    const connectionResult = await atollClient.connect(serverUrl || "", userName, password, notificationBridge.handleNotification);
     if (connectionResult === null) {
         window.showInformationMessage("Successfully connected to Atoll server - loading projects...");
         state.atollServerUrl = serverUrl;
